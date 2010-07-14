@@ -23,6 +23,10 @@ tests meta_stash {
    ok( delete $self->fennec_meta->stash->{that}, q{delete as a hash} );
    ok(!exists $self->fennec_meta->stash->{that}, q{that does not exist any more} );
 
+   ok( $self->fennec_meta->stash({other => 3}), q{replace based on ref} );
+   is( $self->fennec_meta->stash('this'), undef, q{this value doesn't exist any more due to replace} );
+   is( $self->fennec_meta->stash('other'), 3, q{other now has a value} );
+
    my $hashref = $self->fennec_meta->stash;
    is( ref($hashref), 'HASH', q{stash returns a hashref if called in scalar context} );
 
