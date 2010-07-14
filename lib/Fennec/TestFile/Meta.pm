@@ -61,12 +61,23 @@ sub new {
                     sort   => $sort || undef,
                 )
                 : (),
+            stash          => {},
         },
         $class
     );
     my $init = $class->can( 'init' ) || $class->can( 'initialize' );
     $self->$init( @_ ) if $init;
     return $self;
+}
+
+sub stash {
+   my $self = shift;
+   return $self->{stash}->{$_[0]}
+      if scalar(@_) == 1 && ! ref($_[0]);
+   my %opts = ( scalar(@_) == 1 && ref($_[0]) eq 'HASH' )
+            ? %{ $_[0] }
+            : @_;
+   $self->{stash} = { %{$self->{stash}}, %opts };
 }
 
 sub random {
