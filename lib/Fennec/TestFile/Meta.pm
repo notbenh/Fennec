@@ -72,12 +72,13 @@ sub new {
 
 sub stash {
    my $self = shift;
-   return $self->{stash}->{$_[0]}
+   # if handed a single scalar then return the key
+   return (exists $self->{stash}->{$_[0]}) ?  $self->{stash}->{$_[0]} : undef
       if scalar(@_) == 1 && ! ref($_[0]);
-   my %opts = ( scalar(@_) == 1 && ref($_[0]) eq 'HASH' )
-            ? %{ $_[0] }
-            : @_;
-   $self->{stash} = { %{$self->{stash}}, %opts };
+   $self->{stash} = ( scalar(@_) == 1 && ref($_[0]) eq 'HASH' )
+                  ? $_[0]                      # if passed a hashref then replace the stash
+                  : { %{$self->{stash}}, @_ }; # if passed a list then merge to the existing stash
+   return wantarray ? %{ $self->{stash} } : $self->{stash} ;
 }
 
 sub random {
