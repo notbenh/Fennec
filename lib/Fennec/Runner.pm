@@ -142,7 +142,7 @@ sub _test_thread {
 
     try {
         my $test = $self->_init_file( $file )->fennec_new();
-        my $root_workflow = $self->_init_workflow( $test )
+        my $root_workflow = $self->_init_workflow( $test );
         $_->( $self, $test ) for @TEST_HOOKS;
         $self->process_workflow( $root_workflow );
     }
