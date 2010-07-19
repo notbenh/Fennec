@@ -20,15 +20,21 @@ use base 'Exporter';
 
 # Configuration items moved to require at bottom.
 
-Accessors qw/ _benchmark_time _finished _started bail_out finish_hooks seed /;
+Accessors qw/ _benchmark_time _finished _started bail_out seed /;
 
-our @EXPORT_OK = qw/add_config add_test_hook/;
+our @EXPORT_OK = qw/add_config add_test_hook add_finish_hook /;
 our $SINGLETON;
 our %CONFIG_OPTIONS;
 our @TEST_HOOKS;
+our @FINISH_HOOKS;
 
 sub alias { $SINGLETON }
 sub config_options { \%CONFIG_OPTIONS }
+sub singleton { $SINGLETON }
+
+sub add_finish_hook {
+    push @FINISH_HOOKS => @_;
+}
 
 sub add_test_hook {
     push @TEST_HOOKS => @_;
@@ -40,9 +46,12 @@ sub add_config {
     croak "Runner already defines $name"
         if __PACKAGE__->can( $name );
 
-    my %options = @args > 1
-        ? @args
-        : ( default => @args );
+    my %options;
+    if ( @args ) {
+        %options = @args > 1
+            ? @args
+            : ( default => @args );
+    }
 
     $options{ env_override } = uc("FENNEC_$name")
         unless defined $options{ env_override }
@@ -141,8 +150,9 @@ sub _test_thread {
     my ( $file ) = @_;
 
     try {
-        my $test = $self->_init_file( $file )->fennec_new();
-        my $root_workflow = $self->_init_workflow( $test );
+        my $test_class = $self->_init_file( $file );
+        my $root_workflow = $self->_init_workflow( $test_class );
+        my $test = $root_workflow->testfile();
         $_->( $self, $test ) for @TEST_HOOKS;
         $self->process_workflow( $root_workflow );
     }
@@ -174,9 +184,12 @@ sub _init_file {
     return $file->load;
 }
 
+# XXX Do not modify this without knowing that Fennec::Standalone uses it as
+# XXX well!!!
 sub _init_workflow {
     my $self = shift;
-    my ( $test ) = @_;
+    my ( $test_class ) = @_;
+    my $test = $test_class->fennec_new;
     $test->fennec_meta->root_workflow->parent( $test );
     return $test->fennec_meta->root_workflow;
 }
@@ -238,15 +251,10 @@ sub _reap_callback {
 
 sub finish {
     my $self = shift;
-    $self->$_() for @{ $self->finish_hooks || []};
+    $self->$_() for @FINISH_HOOKS;
     $self->threader->finish;
     $self->collector->finish;
     $self->_finished(1);
-}
-
-sub add_finish_hook {
-    my $self = shift;
-    push @{ $self->{ finish_hooks }} => @_;
 }
 
 sub pid_changed {
